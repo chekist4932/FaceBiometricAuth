@@ -4,41 +4,62 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import transforms, datasets
+from torchvision import transforms, datasets, models
 from torchvision import transforms
+from torchsummary import summary
 
 import os
+import numpy as np
 from PIL import Image
 
 from feature_extraction import ResNet34
-from Biometric import BiometricCode
 
-print(f'CUDA: {torch.cuda.is_available()}')
-os.environ['TORCH_HOME'] = 'models\\resnet'
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+lr = 0.001
+
+
+def imshow(inp, title=None):
+    """Display image for Tensor."""
+    inp = inp.numpy().transpose((1, 2, 0))
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    inp = std * inp + mean
+    inp = np.clip(inp, 0, 1)
+    plt.imshow(inp)
+    if title is not None:
+        plt.title(title)
+    plt.pause(0.001)
+
+
 # Загрузка изображения
 image = Image.open("face.jpg")
 
 # Определение преобразований
-preprocess = transforms.Compose([
+transform = transforms.Compose([
     transforms.Resize((224, 224)),  # Изменение размера изображения
-    transforms.ToTensor()  # Преобразование в тензор
+    transforms.ToTensor(),  # Преобразование в тензор
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Нормализация пикселя
 ])
 
 # Применение преобразований к изображению
-tensor_image = preprocess(image)
+tensor_image = transform(image)
 
 # Добавление дополнительной размерности для пакета изображений (если необходимо)
-tensor_image = tensor_image.unsqueeze(0)
-# Вывод полученного тензора
-print(tensor_image)
-# model = ResNet34Features()
-# model = BiometricCode()
-model = ResNet34()
+input_batch = tensor_image.unsqueeze(0)
+input_batch = input_batch.to(device)
 
-feature = model.forward(tensor_image)
+model = ResNet34().to(device)
+summary(model, (3, 224, 224))
 
+optimizer = optim.Adam(model.parameters(), lr=lr)
+EPOCHS = 10
+
+feature = model.forward(input_batch)
+
+#
 print(f'feature:\n{feature}')
-print(f'feature len: {feature.shape}')
+# print(f'feature len: {feature.shape}')
 
 
 # train = datasets.MNIST("", train=True, download=True,
@@ -50,13 +71,13 @@ print(f'feature len: {feature.shape}')
 # testset = torch.utils.data.DataLoader(test, batch_size=15, shuffle=True)
 #
 #
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = nn.Linear(784, 86)
-        self.fc2 = nn.Linear(86, 86)
-        self.fc3 = nn.Linear(86, 86)
-        self.fc4 = nn.Linear(86, 10)
+# class NeuralNetwork(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.fc1 = nn.Linear(784, 86)
+#         self.fc2 = nn.Linear(86, 86)
+#         self.fc3 = nn.Linear(86, 86)
+#         self.fc4 = nn.Linear(86, 10)
 
 #     def forward(self, x):
 #         x = F.relu(self.fc1(x))

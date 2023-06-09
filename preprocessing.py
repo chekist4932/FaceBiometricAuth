@@ -1,85 +1,69 @@
-import torch
-from torchvision.models import resnet50
-from torchvision.models.feature_extraction import get_graph_node_names
-from torchvision.models.feature_extraction import create_feature_extractor
-from torchvision.models.detection.mask_rcnn import MaskRCNN
-from torchvision.models.detection.backbone_utils import LastLevelMaxPool
-from torchvision.ops.feature_pyramid_network import FeaturePyramidNetwork
+import os
+import cv2
+from PIL import Image
+from dlib import get_frontal_face_detector
 
-# To assist you in designing the feature extractor you may want to print out
-# the available nodes for resnet50.
-m = resnet50()
-train_nodes, eval_nodes = get_graph_node_names(resnet50())
+origin_dataset_dir = r"C:\Users\GEORG\Downloads\FaceDataset"
+prerender_dataset_frontal_dir = r"dataset\photo_dataset_frontal"
+prerender_dataset_profile_dir = r"dataset\photo_dataset_profile"
+path_to_face_frontal_detector = "source/haarcascade_frontalface_default.xml"
+path_to_face_profile_detector = "source/haarcascade_profileface.xml"
 
-# The lists returned, are the names of all the graph nodes (in order of
-# execution) for the input model traced in train mode and in eval mode
-# respectively. You'll find that `train_nodes` and `eval_nodes` are the same
-# for this example. But if the model contains control flow that's dependent
-# on the training mode, they may be different.
-
-# To specify the nodes you want to extract, you could select the final node
-# that appears in each of the main layers:
-return_nodes = {
-    # node_name: user-specified key for output dict
-    'layer1.2.relu_2': 'layer1',
-    'layer2.3.relu_2': 'layer2',
-    'layer3.5.relu_2': 'layer3',
-    'layer4.2.relu_2': 'layer4',
-}
-
-# But `create_feature_extractor` can also accept truncated node specifications
-# like "layer1", as it will just pick the last node that's a descendent of
-# of the specification. (Tip: be careful with this, especially when a layer
-# has multiple outputs. It's not always guaranteed that the last operation
-# performed is the one that corresponds to the output you desire. You should
-# consult the source code for the input model to confirm.)
-return_nodes = {
-    'layer1': 'layer1',
-    'layer2': 'layer2',
-    'layer3': 'layer3',
-    'layer4': 'layer4',
-}
-
-# Now you can build the feature extractor. This returns a module whose forward
-# method returns a dictionary like:
-# {
-#     'layer1': output of layer 1,
-#     'layer2': output of layer 2,
-#     'layer3': output of layer 3,
-#     'layer4': output of layer 4,
-# }
-create_feature_extractor(m, return_nodes=return_nodes)
+photos = os.listdir(origin_dataset_dir)
 
 
-# Let's put all that together to wrap resnet50 with MaskRCNN
-
-# MaskRCNN requires a backbone with an attached FPN
-class Resnet50WithFPN(torch.nn.Module):
-    def __init__(self):
-        super(Resnet50WithFPN, self).__init__()
-        # Get a resnet50 backbone
-        m = resnet50()
-        # Extract 4 main layers (note: MaskRCNN needs this particular name
-        # mapping for return nodes)
-        self.body = create_feature_extractor(
-            m, return_nodes={f'layer{k}': str(v)
-                             for v, k in enumerate([1, 2, 3, 4])})
-        # Dry run to get number of channels for FPN
-        inp = torch.randn(2, 3, 224, 224)
-        with torch.no_grad():
-            out = self.body(inp)
-        in_channels_list = [o.shape[1] for o in out.values()]
-        # Build FPN
-        self.out_channels = 256
-        self.fpn = FeaturePyramidNetwork(
-            in_channels_list, out_channels=self.out_channels,
-            extra_blocks=LastLevelMaxPool())
-
-    def forward(self, x):
-        x = self.body(x)
-        x = self.fpn(x)
-        return x
+def resize_without_deformation(image, size=(500, 500)):
+    height, width, _ = image.shape
+    longest_edge = max(height, width)
+    top, bottom, left, right = 0, 0, 0, 0
+    if height < longest_edge:
+        height_diff = longest_edge - height
+        top = int(height_diff / 2)
+        bottom = height_diff - top
+    elif width < longest_edge:
+        width_diff = longest_edge - width
+        left = int(width_diff / 2)
+        right = width_diff - left
+    image_with_border = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+    resized_image = cv2.resize(image_with_border, size)
+    return resized_image
 
 
-# Now we can build our model!
-model = MaskRCNN(Resnet50WithFPN(), num_classes=91).eval()
+total = 0
+loss = 0
+loss_name = []
+
+face_detector = cv2.CascadeClassifier(path_to_face_profile_detector)
+
+for photo_name in photos:
+
+    photo_path = origin_dataset_dir + '\\' + photo_name
+
+    image = cv2.imread(photo_path)
+    image = resize_without_deformation(image)
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    face_result = face_detector.detectMultiScale(gray,
+                                                 scaleFactor=1.1,
+                                                 minNeighbors=5,
+                                                 minSize=(60, 60),
+                                                 flags=cv2.CASCADE_SCALE_IMAGE)
+    if len(face_result) != 0:
+        x, y, w, h = face_result[0]
+        image = image[y:y + h, x:x + w]
+        image = resize_without_deformation(image, size=(224, 244))
+
+        save_path = prerender_dataset_profile_dir + f'\\{photo_name}.jpg'
+        cv2.imwrite(save_path, image)
+        total += 1
+
+
+    else:
+        loss += 1
+        print(f"Face not found in - '{photo_name}'")
+        loss_name.append(photo_name)
+        continue
+
+print(f'Total preprocessing: {total}')
+print(f'Loss preprocessing: {loss}\nLoss names: {loss_name}')
