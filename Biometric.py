@@ -34,5 +34,4 @@ class BiometricCode(nn.Module):
         face_feature = self.feature_extractor(tensor_image)
         face_feature = face_feature.view(face_feature.size(0), -1)
         key = self.key_generator(face_feature)
-        # key_bytes = key.view(-1, 8).byte()  # Преобразование в байты
         return key

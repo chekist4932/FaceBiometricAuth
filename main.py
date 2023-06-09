@@ -10,7 +10,6 @@ from torchvision import transforms
 import os
 from PIL import Image
 
-from preprocessing import Resnet50WithFPN
 from feature_extraction import ResNet34
 from Biometric import BiometricCode
 
@@ -30,16 +29,16 @@ tensor_image = preprocess(image)
 
 # Добавление дополнительной размерности для пакета изображений (если необходимо)
 tensor_image = tensor_image.unsqueeze(0)
-# tensor_image = transforms.Grayscale(tensor_image)
 # Вывод полученного тензора
 print(tensor_image)
-model = ResNet34(256)
-# model.to('cuda')
+# model = ResNet34Features()
+# model = BiometricCode()
+model = ResNet34()
 
-key = model.forward(tensor_image)
+feature = model.forward(tensor_image)
 
-print(f'Key:\n{key}')
-print(f'Key len: {len(key)}')
+print(f'feature:\n{feature}')
+print(f'feature len: {feature.shape}')
 
 
 # train = datasets.MNIST("", train=True, download=True,
