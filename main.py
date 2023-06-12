@@ -9,12 +9,13 @@ from torchvision import transforms, datasets, models
 from torchvision import transforms
 from torchsummary import summary
 
-import os
 import numpy as np
 from PIL import Image
 
-from source import transform, imshow, image_show
-from feature_extraction import ResNet34
+import os
+from tqdm import tqdm
+
+from source import transform, image_shower, imshow
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -25,17 +26,72 @@ trainset = DataLoader(train, batch_size=15, shuffle=True)
 test = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'test'), transform=transform)
 testset = DataLoader(train, batch_size=15, shuffle=True)
 
-# res = []
-# for images, labels in testset:
-#     for i in labels:
-#         res.append(int(i))
-# print(set(res))
+num_classes = 46  # Новое количество классов
+classes_ = [f"Student{number}" for number in range(num_classes)]
+
+model = models.resnet34(weights=models.resnet.ResNet34_Weights.DEFAULT)
+model.to(device)
+model.fc = nn.Linear(512 * models.resnet.BasicBlock.expansion, num_classes).to(device)
+
+model.load_state_dict(torch.load('models/model.pth'))
+
+# summary(model, (3, 224, 224))
+
+images, labels = next(iter(testset))
+outputs = model(images.to(device))
+
+_, predicted = torch.max(outputs, 1)
+# count = 0
+# for image, label in zip(images, labels):
+#     if count < 4:
+#         imshow(image, label)
+#     else:
+#         break
+#     count += 1
+print("Real: ", " ".join("%5s" % classes_[predict] for predict in labels[:20]))
+print("Predicted: ", " ".join("%5s" % classes_[predict] for predict in predicted[:20]))
+
+# lr = 0.001
+# wd = 0.0001
+# EPOCHS = 10
+#
+# loss_fn = nn.CrossEntropyLoss()
+# optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+#
+# for epoch in range(EPOCHS):
+#     running_loss = 0.0
+#     for iter_num, data in tqdm(enumerate(trainset)):
+#         images, labels = data[0].to(device), data[1].to(device)
+#         optimizer.zero_grad()
+#         outputs = model(images)
+#         loss = loss_fn(outputs, labels)
+#         loss.backward()
+#         optimizer.step()
+#
+#         running_loss += loss.item()
+#
+#     print(f'Epoch: {epoch} | Training loss: {running_loss / len(trainset)}')
+#
+# correct = 0
+# total = 0
+# with torch.no_grad():
+#     model.eval()
+#     for data in testset:
+#         images, labels = data[0].to(device), data[1].to(device)
+#         outputs = model(images)
+#         _, predicted = torch.max(outputs.data, 1)
+#         total += labels.size(0)
+#         correct += (predicted == labels).sum().item()
+#
+# print(f"Accuracy: {100 * correct / total}")
+#
+# torch.save(model.state_dict(), 'models/model.pth')
+
 
 # for im, tt in zip(images, labels):
 #     imshow(im, tt)
 # # image_show(images, labels)
 
-lr = 0.001
 
 # model = models.resnet34().to(device)
 #
@@ -44,8 +100,7 @@ lr = 0.001
 #
 # summary(model, (3, 224, 224))
 #
-# optimizer = optim.Adam(model.parameters(), lr=lr)
-# EPOCHS = 10
+
 
 # faces = os.listdir(dataset_dir)
 #
@@ -68,6 +123,7 @@ lr = 0.001
 # except KeyboardInterrupt:
 #     print(f'Total iterations: {iter_count}')
 #     exit()
+
 
 # input('Next iteration - ')
 

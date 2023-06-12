@@ -1,3 +1,29 @@
+# import torch
+# from torchvision import models, datasets
+# import torch.nn as nn
+#
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# num_classes = 46
+#
+# test = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'test'), transform=transform)
+# testset = DataLoader(train, batch_size=15, shuffle=True)
+#
+# model = models.resnet34(weights=models.resnet.ResNet34_Weights.DEFAULT)
+# model.to(device)
+# model.fc = nn.Linear(512 * models.resnet.BasicBlock.expansion, num_classes).to(device)
+# model.load_state_dict(torch.load('models/model.pth'))
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
 # import os
 # import random
 # import shutil
