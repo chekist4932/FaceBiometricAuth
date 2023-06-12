@@ -50,7 +50,7 @@ class ResNet34(nn.Module):
             ResidualBlock(512, 512, 2),
             nn.AvgPool2d(2)
         )
-
+        self.classification = nn.Linear(32 * (64 // 4) * (64 // 4), 46)
         # Fully connected layers for generating the code
         self.key_generation = nn.Sequential(
             nn.Linear(in_features=32 * (64 // 4) * (64 // 4), out_features=128),
@@ -61,5 +61,7 @@ class ResNet34(nn.Module):
     def forward(self, tensor_image):
         features = self.extract_feature(tensor_image)
         features = features.view(features.size(0), -1)
-        key = self.key_generation(features)
-        return key
+        x = self.classification(features)
+        # key = self.key_generation(features)
+        # return key
+        return x

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 from torchvision import transforms, datasets, models
 from torchvision import transforms
 from torchsummary import summary
@@ -12,55 +13,63 @@ import os
 import numpy as np
 from PIL import Image
 
+from source import transform, imshow, image_show
 from feature_extraction import ResNet34
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+dataset_dir = 'dataset'
+train = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform=transform)
+trainset = DataLoader(train, batch_size=15, shuffle=True)
+
+test = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'test'), transform=transform)
+testset = DataLoader(train, batch_size=15, shuffle=True)
+
+# res = []
+# for images, labels in testset:
+#     for i in labels:
+#         res.append(int(i))
+# print(set(res))
+
+# for im, tt in zip(images, labels):
+#     imshow(im, tt)
+# # image_show(images, labels)
+
 lr = 0.001
 
-
-def imshow(inp, title=None):
-    """Display image for Tensor."""
-    inp = inp.numpy().transpose((1, 2, 0))
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
-    inp = std * inp + mean
-    inp = np.clip(inp, 0, 1)
-    plt.imshow(inp)
-    if title is not None:
-        plt.title(title)
-    plt.pause(0.001)
-
-
-# Загрузка изображения
-image = Image.open("face.jpg")
-
-# Определение преобразований
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),  # Изменение размера изображения
-    transforms.ToTensor(),  # Преобразование в тензор
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Нормализация пикселя
-])
-
-# Применение преобразований к изображению
-tensor_image = transform(image)
-
-# Добавление дополнительной размерности для пакета изображений (если необходимо)
-input_batch = tensor_image.unsqueeze(0)
-input_batch = input_batch.to(device)
-
-model = ResNet34().to(device)
-summary(model, (3, 224, 224))
-
-optimizer = optim.Adam(model.parameters(), lr=lr)
-EPOCHS = 10
-
-feature = model.forward(input_batch)
-
+# model = models.resnet34().to(device)
 #
-print(f'feature:\n{feature}')
-# print(f'feature len: {feature.shape}')
+# num_classes = 46  # Новое количество классов
+# model.fc = nn.Linear(512 * models.resnet.BasicBlock.expansion, num_classes).to(device)
+#
+# summary(model, (3, 224, 224))
+#
+# optimizer = optim.Adam(model.parameters(), lr=lr)
+# EPOCHS = 10
 
+# faces = os.listdir(dataset_dir)
+#
+# iter_count = 0
+# try:
+#     for face in faces:
+#         face_dir = dataset_dir + '/' + face
+#         image = Image.open(face_dir)
+#         tensor_image = transform(image)
+#         tensor_image = transform(image)
+#
+#         input_batch = tensor_image.unsqueeze(0)
+#         input_batch = input_batch.to(device)
+#
+#         feature = model.forward(input_batch)
+#
+#         print(f'feature:\n{feature}')
+#         print(f'feature len: {feature.shape}')
+#         iter_count += 1
+# except KeyboardInterrupt:
+#     print(f'Total iterations: {iter_count}')
+#     exit()
+
+# input('Next iteration - ')
 
 # train = datasets.MNIST("", train=True, download=True,
 #                        transform=transforms.Compose([transforms.ToTensor()]))

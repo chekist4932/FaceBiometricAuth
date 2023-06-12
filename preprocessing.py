@@ -1,18 +1,19 @@
 import os
 import cv2
+from numpy import typing
 from PIL import Image
 from dlib import get_frontal_face_detector
 
 origin_dataset_dir = r"C:\Users\GEORG\Downloads\FaceDataset"
 prerender_dataset_frontal_dir = r"dataset\photo_dataset_frontal"
 prerender_dataset_profile_dir = r"dataset\photo_dataset_profile"
-path_to_face_frontal_detector = "source/haarcascade_frontalface_default.xml"
-path_to_face_profile_detector = "source/haarcascade_profileface.xml"
+path_to_face_frontal_detector = "haar_cascade/haarcascade_frontalface_default.xml"
+path_to_face_profile_detector = "haar_cascade/haarcascade_profileface.xml"
 
 photos = os.listdir(origin_dataset_dir)
 
 
-def resize_without_deformation(image, size=(500, 500)):
+def resize_without_deformation(image: typing.NDArray, size=(500, 500)):
     height, width, _ = image.shape
     longest_edge = max(height, width)
     top, bottom, left, right = 0, 0, 0, 0
@@ -40,6 +41,7 @@ for photo_name in photos:
     photo_path = origin_dataset_dir + '\\' + photo_name
 
     image = cv2.imread(photo_path)
+
     image = resize_without_deformation(image)
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
