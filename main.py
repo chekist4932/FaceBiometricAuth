@@ -16,15 +16,9 @@ import os
 from tqdm import tqdm
 
 from source import transform, image_shower, imshow
+from datasets import trainset, testset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-dataset_dir = 'dataset'
-train = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'train'), transform=transform)
-trainset = DataLoader(train, batch_size=15, shuffle=True)
-
-test = torchvision.datasets.ImageFolder(os.path.join(dataset_dir, 'test'), transform=transform)
-testset = DataLoader(train, batch_size=15, shuffle=True)
 
 num_classes = 46  # Новое количество классов
 classes_ = [f"Student{number}" for number in range(num_classes)]

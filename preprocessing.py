@@ -4,13 +4,15 @@ from numpy import typing
 from PIL import Image
 from dlib import get_frontal_face_detector
 
-origin_dataset_dir = r"C:\Users\GEORG\Downloads\FaceDataset"
-prerender_dataset_frontal_dir = r"dataset\photo_dataset_frontal"
-prerender_dataset_profile_dir = r"dataset\photo_dataset_profile"
-path_to_face_frontal_detector = "haar_cascade/haarcascade_frontalface_default.xml"
-path_to_face_profile_detector = "haar_cascade/haarcascade_profileface.xml"
+photo_set_dir = r"C:\Users\GEORG\Downloads\FaceDataset"
 
-photos = os.listdir(origin_dataset_dir)
+frontal_faces_dir = r"dataset\photo_dataset_frontal"
+profile_faces_dir = r"dataset\photo_dataset_profile"
+
+frontal_detector = "haar_cascade/haarcascade_frontalface_default.xml"
+profile_detector = "haar_cascade/haarcascade_profileface.xml"
+
+photos = os.listdir(photo_set_dir)
 
 
 def resize_without_deformation(image: typing.NDArray, size=(500, 500)):
@@ -34,11 +36,11 @@ total = 0
 loss = 0
 loss_name = []
 
-face_detector = cv2.CascadeClassifier(path_to_face_profile_detector)
+face_detector = cv2.CascadeClassifier(profile_detector)
 
 for photo_name in photos:
 
-    photo_path = origin_dataset_dir + '\\' + photo_name
+    photo_path = photo_set_dir + '\\' + photo_name
 
     image = cv2.imread(photo_path)
 
@@ -56,7 +58,7 @@ for photo_name in photos:
         image = image[y:y + h, x:x + w]
         image = resize_without_deformation(image, size=(224, 244))
 
-        save_path = prerender_dataset_profile_dir + f'\\{photo_name}.jpg'
+        save_path = profile_faces_dir + f'\\{photo_name}.jpg'
         cv2.imwrite(save_path, image)
         total += 1
 
