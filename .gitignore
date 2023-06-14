@@ -1,5 +1,7 @@
 /dataset
 /render_photos
+/old_dataset
+models/model_v2.pth
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/

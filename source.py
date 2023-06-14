@@ -35,5 +35,7 @@ def image_shower(images, labels, n=4):
     print("Real Labels: ", ' '.join('%5s' % classes[label] for label in labels[:n]))
 
 
-num_classes = 46
-classes = [f"Student{number}" for number in range(num_classes)]
+num_classes_own = 37
+classes = [f"Student{number}" for number in range(num_classes_own)]
+classes.append('classAlien')
+num_classes = num_classes_own + 1
