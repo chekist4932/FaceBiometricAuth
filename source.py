@@ -4,10 +4,13 @@ from torchvision import transforms
 import matplotlib.pyplot as plt
 import numpy as np
 
+from PIL import Image
+import cv2
+
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),  # Изменение размера изображения
-    transforms.ToTensor(),  # Преобразование в тензор
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Нормализация пикселя
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Нормализация пикселя
 ])
 
 
@@ -35,7 +38,25 @@ def image_shower(images, labels, n=4):
     print("Real Labels: ", ' '.join('%5s' % classes[label] for label in labels[:n]))
 
 
-num_classes_own = 37
+num_classes_own = 31
 classes = [f"Student{number}" for number in range(num_classes_own)]
-classes.append('classAlien')
+classes.append('Alien')
 num_classes = num_classes_own + 1
+
+# dir = 'dataset/train/0/IMG_4970.jpg'
+#
+# image = cv2.imread(dir, cv2.IMREAD_COLOR)
+# image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+# image = image.astype(np.float32)
+# image = image / 255.0
+# image = image.transpose((2, 0, 1))
+#
+# tensor_image = torch.from_numpy(image)
+# # plt.imshow(image)
+#
+# # plt.pause(3)
+# print(image)
+#
+# im = Image.open(dir)
+# im = transform(im)
+# print(im)
