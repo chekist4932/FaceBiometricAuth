@@ -1,0 +1,4 @@
+
+Hpython:S5806"+Rename this variable; it shadows a builtin.(ÍíÎØøÿÿÿÿ
+Hpython:S1481#"+Remove the unused local variable "path_to".(ı–¾åúÿÿÿÿ
+;python:S1258"Remove this commented out code.(¾üşÿÿÿÿ

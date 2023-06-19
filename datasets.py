@@ -1,8 +1,5 @@
-import json
-
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision import datasets
 
 import os
 from PIL import Image
@@ -24,7 +21,7 @@ class FaceDataset(Dataset):
         image = Image.open(image_path)
         image = self.transform(image)
 
-        label = self._get_label_old(image_path)
+        label = self._get_label(image_path)
 
         return image, label
 
@@ -57,14 +54,6 @@ class FaceDataset(Dataset):
 dataset_dir = 'dataset'
 train_set = FaceDataset(os.path.join(dataset_dir, 'train'), transform=transform)
 train_loader = DataLoader(train_set, batch_size=15, shuffle=True)
-
-# count = 0
-# for im, lab in train_set:
-#     # print(f'len lab: {lab.shape} | Lab: {lab}')
-#     # print(f'Len tensor: {im.shape} | tensor: {im}')
-#     count += 1
-#     if count == 1000: break
-
 
 test_set = FaceDataset(os.path.join(dataset_dir, 'test'), transform=transform)
 test_loader = DataLoader(train_set, batch_size=15, shuffle=True)

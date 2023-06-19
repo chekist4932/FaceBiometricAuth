@@ -1,109 +1,18 @@
 import pprint
 
 import torch
-import torchvision
-import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
-from torchvision import transforms, datasets, models
 from torchsummary import summary
 from torch.cuda.amp import autocast
 
-import numpy as np
-from PIL import Image
-
 import os
-from tqdm.auto import tqdm, trange
+from tqdm.auto import tqdm
 
 from source import transform, image_shower, imshow, classes, num_classes
-from datasets import train_loader, test_loader
-
-
-class ExtraLayers(nn.Module):
-    def __init__(self):
-        super(ExtraLayers, self).__init__()
-        self.classifier = nn.Sequential(
-            nn.Linear(512, 128),
-            nn.ReLU(),
-            nn.Linear(128, 32)
-        )
-
-    def forward(self, x):
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
-        return x
-
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = models.resnet34(weights=models.resnet.ResNet34_Weights.DEFAULT)
-model.to(device)
-
-
-extra_layers = ExtraLayers()  # encoder
-
-model.fc = extra_layers.to(device)
-
-lr = 0.0001
-wd = 0.0001
-EPOCHS = 50
-# tens = {f'{i}': [] for i in range(num_classes)}
-# middle_tensors = {f'{i}': [] for i in range(num_classes)}
-# loss_fn = nn.CrossEntropyLoss().to(device)
-loss_fn = nn.MSELoss().to(device)
-best_loss = float('inf')
-
-optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
-
-use_amp = False
-torch.backends.cudnn.benchmark = True
-
-
-def train_model(best_loss):
-    for epoch in range(EPOCHS):
-        loss_val = 0.0
-        model.train()
-        with tqdm(total=test_loader.__len__(), position=0) as progress:
-            for tensor_image, label in train_loader:
-                tensor_image = tensor_image.to(device)
-                label = label.to(device)
-                optimizer.zero_grad()
-                with autocast(use_amp):
-                    output = model(tensor_image)
-
-                    loss = loss_fn(output, label)
-                    if loss < best_loss:
-                        best_loss = loss
-                        save_model(model_name='best_model.pth')
-
-                loss.backward()
-
-                loss_item = loss.item()
-                loss_val += loss_item
-
-                optimizer.step()
-                progress.set_description(f"Epoch: {epoch} | Training loss(iter): {str(loss_item)[:6]}")
-                progress.update()
-            progress.set_description(f"Epoch: {epoch} | Training loss(total): {str(loss_val / len(train_loader))[:6]}")
-
-
-def test_model():
-    test_loss = 0.0
-    correct = 0.0
-    with torch.no_grad():
-        model.eval()
-        for data in test_loader:
-            image, label = data[0].to(device), data[1].to(device)
-            output = model(image)
-            # _, predicted = torch.max(output.data, 1)
-            test_loss += loss_fn(output, label).item()
-            correct += torch.mean(torch.isclose(output, label, rtol=0.1, atol=0.1).float())
-            print(f'{torch.dist(output[0], label[0])}\n--------------------')
-            # total += label.size(0)
-            # correct += (output == label).sum().item()
-
-    print(f"Test Loss: {test_loss / len(test_loader):.4f} | Accuracy: {100 * correct / len(test_loader)}")
+from datasets import train_loader, test_loader, test_set
+from model import device, model
 
 
 def save_model(model_name='model.pth'):
@@ -114,22 +23,6 @@ def save_model(model_name='model.pth'):
 def load_model(model_name='model.pth'):
     dir_to_load = os.path.join('models', model_name)
     model.load_state_dict(torch.load(dir_to_load))
-
-
-def label_check():
-    images, labels = next(iter(test_loader))
-    outputs = model(images.to(device))
-
-    _, predicted = torch.max(outputs, 1)
-    count = 0
-    for image, label in zip(images, labels):
-        if count < 4:
-            imshow(image, label)
-        else:
-            break
-        count += 1
-    print("Real: ", " ".join("%5s" % classes[predict] for predict in labels[:20]))
-    print("Predicted: ", " ".join("%5s" % classes[predict] for predict in predicted[:20]))
 
 
 def euclidean_distance_equal_stat(middle_tensors: dict, tens: dict):
@@ -159,101 +52,142 @@ def euclidean_distance_diff_stat(middle_tensors: dict, tens: dict):
     print(f'diff | middle: {middle_dist} | max: {max(dist)} | min: {min(dist)}')
 
 
-if __name__ == "__main__":
-    # summary(model, (3, 224, 224))
-    # train_model(best_loss)
-    load_model(model_name='best_model.pth')
-    # test_model()
-    # save_model(model_name='model_test_resnet_100.pth')
-    # load_model(model_name='model.pth')
-    # tens = torch.load('tensor_dict.pth')
-    #
-    # for key in tens.keys():
-    #     temp = 0
-    #     for tensor in tens[key]:
-    #         temp += tensor
-    #     middle = temp / len(tens[key])
-    #     middle_tensors[key] = middle
-    # pprint.pprint(middle_tensors)
-    # middle = torch.load('middle_tensor_dict.pth')
-    # tens_array = torch.load('tensor_dict.pth')
-    # euclidean_distance_equal_stat(middle, tens_array)
-    # euclidean_distance_diff_stat(middle, tens_array)
+def train_model(best_loss):
+    for epoch in range(EPOCHS):
+        loss_val = 0.0
+        model.train()
+        with tqdm(total=test_loader.__len__(), position=0) as progress:
+            for tensor_image, label in train_loader:
+                tensor_image = tensor_image.to(device)
+                label = label.to(device)
+                optimizer.zero_grad()
+                with autocast(use_amp):
 
-    # load_model()
+                    output = model(tensor_image)
+
+                    loss = loss_fn(output, label)
+                    if loss < best_loss:
+                        best_loss = loss
+                        save_model(model_name='best_model')
+
+                loss.backward()
+
+                loss_item = loss.item()
+                loss_val += loss_item
+
+                optimizer.step()
+                progress.set_description(f"Epoch: {epoch} | Training loss(iter): {str(loss_item)[:6]}")
+                progress.update()
+            progress.set_description(f"Epoch: {epoch} | Training loss(total): {str(loss_val / len(train_loader))[:6]}")
+
+
+def is_correct(output, label):
+    output = output.to(torch.uint8)
+    label = label.to(torch.uint8)
+    if torch.mean(torch.isclose(output, label, rtol=0.01, atol=0.01).float()).item() == 1.0:
+        return True
+    else:
+        return False
+
+
+def test_model():
+    correct = 0.0
+    total = 0
+    with torch.no_grad():
+        model.eval()
+        for data in test_loader:
+            images, labels = data[0].to(device), data[1].to(device)
+            outputs = model(images)
+
+            for output, label in zip(outputs, labels):
+                correct += torch.mean(torch.isclose(output, label, rtol=0.1, atol=0.1).float())
+
+                output = output.to(torch.uint8)
+                label = label.to(torch.uint8)
+
+                # _, predicted = torch.argmax(output.data)
+                # correct += torch.mean((output == label).float()).item()
+                total += 1
+
+    print(f"Accuracy: {100 * correct / total}")
+
+
+def test_model_frr():
+    FRR = 0.0  # False Reject Rate
+    total_correct_access = 0.0
+    total = 0
+    with torch.no_grad():
+        model.eval()
+        for data in test_loader:
+            images, labels = data[0].to(device), data[1].to(device)
+            outputs = model(images)
+
+            for output, label in zip(outputs, labels):
+
+                correct = is_correct(output, label)
+                if correct:
+                    total_correct_access += 1
+                else:
+                    FRR += 1
+                total += 1
+
+    print(f"FRR: {100 * FRR / total:.4f} | Accuracy: {100 * total_correct_access / total}")
+    return FRR, total_correct_access
+
+
+def test_model_far():
+    total = 0.0
+    total_correct_denied = 0.0
+    FAR = 0.0
+    tens_to_test_far = torch.load('tens_to_test_far.pth')
+    keys = torch.load('middle_tensor_dict.pth')
+    for class_id, tensors in tens_to_test_far.items():
+        for key_id in keys.keys():
+            if class_id == key_id:
+                continue
+
+            for tens in tensors:
+                correct = is_correct(tens, keys[key_id])
+                if correct:
+                    FAR += 1
+                else:
+                    total_correct_denied += 1
+                total += 1
+    print(f"FAR: {100 * FAR / total:.4f} | Accuracy: {100 * total_correct_denied / total}")
+    return FAR, total_correct_denied
+
+
+lr = 0.0001
+wd = 0.0001
+EPOCHS = 50
+
+loss_fn = nn.MSELoss().to(device)
+best_loss = float('inf')
+
+optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+
+use_amp = False
+torch.backends.cudnn.benchmark = True
+
+if __name__ == "__main__":
+    summary(model, (3, 224, 224))
+    # train_model(best_loss)
+    load_model(model_name='model_test_resnet_50.pth')
     # test_model()
+    far, tn = test_model_far()
+    frr, tp = test_model_frr()
+    accuracy = (tn + tp) / (frr + far + tn + tp)
+    print(f'Accuracy: {accuracy}')
+    # tens = torch.load('middle_tensor_dict.pth')
     # with torch.no_grad():
     #     model.eval()
-    #     # for images, labels in tqdm(train_loader, position=0, total=train_loader.__len__()):
-    #     for images, labels in train_loader:
-    #         for im, lab in zip(images.to(device), labels.to(device)):
-    #             im = im.unsqueeze(0)
-    #             out = model(im)
-    #             tens[f'{lab}'].append(out)
-    #     print(tens)
-    #     input("Save?")
-    #     torch.save(tens, 'tensor_dict.pth')
-
-# for image_name in os.listdir('dataset/test/0'):
-#     image = Image.open(f'dataset/test/0/{image_name}')
-#     tensor_image = transform(image)
-#     tensor_image.to(device)
-#     input_batch = tensor_image.unsqueeze(0)
-#     input_batch = input_batch.to(device)
-#     with torch.no_grad():
-#         model.eval()
-#         out = model(input_batch)
-#         _, predicted = torch.max(out.data, 1)
-#         # input(predicted.sum())
-#         print(predicted)
-#         print(out)
-#         print("----------------------------")
-# summary(model, (3, 224, 224))
-# train_model()
-# test_model()
-# save_model()
-# load_model(model_name='model_v2.pth')
-# summary(model, (3, 224, 224))
-# label_check()
-
-# for im, tt in zip(images, labels):
-#     imshow(im, tt)
-# # image_show(images, labels)
-
-
-# model = models.resnet34().to(device)
-#
-# num_classes = 46  # Новое количество классов
-# model.fc = nn.Linear(512 * models.resnet.BasicBlock.expansion, num_classes).to(device)
-#
-# summary(model, (3, 224, 224))
-#
-
-
-# faces = os.listdir(dataset_dir)
-#
-# iter_count = 0
-# try:
-#     for face in faces:
-#         face_dir = dataset_dir + '/' + face
-#         image = Image.open(face_dir)
-#         tensor_image = transform(image)
-#         tensor_image = transform(image)
-#
-#         input_batch = tensor_image.unsqueeze(0)
-#         input_batch = input_batch.to(device)
-#
-#         feature = model.forward(input_batch)
-#
-#         print(f'feature:\n{feature}')
-#         print(f'feature len: {feature.shape}')
-#         iter_count += 1
-# except KeyboardInterrupt:
-#     print(f'Total iterations: {iter_count}')
-#     exit()
-
-
-# input('Next iteration - ')
+    #     for data in test_loader:
+    #         images, labels = data[0].to(device), data[1].to(device)
+    #         outputs = model(images)
+    #         for output, label in zip(outputs, labels):
+    #             class_id_out = torch.argmax(output.data).item()
+    #             class_id_lab = torch.argmax(output.data).item()
+    #             pass
 
 # train = datasets.MNIST("", train=True, download=True,
 #                        transform=transforms.Compose([transforms.ToTensor()]))
